@@ -1,6 +1,7 @@
 use crate::{
     align_view,
     annotations::diagnostics::InlineDiagnostics,
+    annotations::diff::InlineDiffAnnotation,
     document::{DocumentColorSwatches, DocumentInlayHints},
     editor::{GutterConfig, GutterType},
     graphics::Rect,
@@ -526,6 +527,11 @@ impl View {
                 doc.view_offset(self.id).horizontal_offset,
                 config,
             ));
+        }
+
+        if doc.expanded_diff_hunks(self.id).is_some() {
+            text_annotations
+                .add_line_annotation(Box::new(InlineDiffAnnotation::new(doc, self.id)));
         }
 
         text_annotations

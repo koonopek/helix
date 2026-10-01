@@ -291,6 +291,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "c" => toggle_comments,
             "C" => toggle_block_comments,
             "A-c" => toggle_line_comments,
+            "v" => toggle_hunk_diff,
+            "V" => toggle_all_hunk_diffs,
             "?" => command_palette,
         },
         "z" => { "View"

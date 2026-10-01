@@ -24,7 +24,7 @@ use serde::de::{self, Deserialize, Deserializer};
 use serde::Serialize;
 use std::borrow::Cow;
 use std::cell::Cell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::future::Future;
 use std::io;
@@ -201,6 +201,11 @@ pub struct Document {
 
     diff_handle: Option<DiffHandle>,
     version_control_head: Option<Arc<ArcSwap<Box<str>>>>,
+    /// Diff hunks which are expanded to show the removed text inline
+    /// (as virtual text), per view. A hunk is identified by the starting
+    /// line of its `after` range at the time it was expanded; entries that
+    /// no longer match a hunk are simply ignored.
+    pub(crate) expanded_diff_hunks: HashMap<ViewId, HashSet<u32>>,
 
     // when document was used for most-recent-used buffer picker
     pub focused_at: std::time::Instant,
@@ -750,6 +755,7 @@ impl Document {
             modified_since_accessed: false,
             language_servers: HashMap::new(),
             diff_handle: None,
+            expanded_diff_hunks: HashMap::new(),
             config,
             version_control_head: None,
             focused_at: std::time::Instant::now(),
@@ -1429,6 +1435,7 @@ impl Document {
         self.jump_labels.remove(&view_id);
         self.document_highlights.remove(&view_id);
         self.document_highlight_controllers.remove(&view_id);
+        self.expanded_diff_hunks.remove(&view_id);
     }
 
     /// Apply a [`Transaction`] to the [`Document`] to change its text.
@@ -1960,6 +1967,21 @@ impl Document {
         } else {
             self.diff_handle = None;
         }
+    }
+
+    /// The diff hunks whose removed text is shown inline (as virtual text)
+    /// in the given view. Hunks are identified by the starting line of their
+    /// `after` range.
+    pub fn expanded_diff_hunks(&self, view_id: ViewId) -> Option<&HashSet<u32>> {
+        self.expanded_diff_hunks
+            .get(&view_id)
+            .filter(|hunks| !hunks.is_empty())
+    }
+
+    /// Mutable access to the set of expanded diff hunks for the given view,
+    /// see [`Document::expanded_diff_hunks`].
+    pub fn expanded_diff_hunks_mut(&mut self, view_id: ViewId) -> &mut HashSet<u32> {
+        self.expanded_diff_hunks.entry(view_id).or_default()
     }
 
     pub fn version_control_head(&self) -> Option<Arc<Box<str>>> {

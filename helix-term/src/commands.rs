@@ -27,6 +27,7 @@ use helix_core::{
     doc_formatter::TextFormat,
     encoding, find_workspace,
     graphemes::{self, next_grapheme_boundary},
+    graphemes::{self, next_grapheme_boundary},
     history::UndoKind,
     increment,
     indent::{self, IndentStyle},
@@ -458,6 +459,8 @@ impl MappableCommand {
         goto_prev_change, "Goto previous change",
         goto_first_change, "Goto first change",
         goto_last_change, "Goto last change",
+        toggle_hunk_diff, "Show/hide inline diff of the change under the cursor",
+        toggle_all_hunk_diffs, "Show/hide inline diffs of all changes",
         goto_line_start, "Goto line start",
         goto_line_end, "Goto line end",
         goto_column, "Goto column",
@@ -4273,6 +4276,53 @@ fn goto_next_change_impl(cx: &mut Context, direction: Direction) {
         doc.set_selection(view.id, selection)
     };
     cx.editor.apply_motion(motion);
+}
+
+fn toggle_hunk_diff(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let Some(handle) = doc.diff_handle() else {
+        cx.editor
+            .set_status("Diff is not available in current buffer");
+        return;
+    };
+    let cursor_line = doc
+        .selection(view.id)
+        .primary()
+        .cursor_line(doc.text().slice(..)) as u32;
+    let hunk = {
+        let diff = handle.load();
+        diff.hunk_at(cursor_line, true)
+            .map(|idx| diff.nth_hunk(idx))
+    };
+    let Some(hunk) = hunk else {
+        cx.editor.set_status("No change under the cursor");
+        return;
+    };
+    let view_id = view.id;
+    let hunks = doc.expanded_diff_hunks_mut(view_id);
+    if !hunks.remove(&hunk.after.start) {
+        hunks.insert(hunk.after.start);
+    }
+}
+
+fn toggle_all_hunk_diffs(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let Some(handle) = doc.diff_handle() else {
+        cx.editor
+            .set_status("Diff is not available in current buffer");
+        return;
+    };
+    let all_hunks: std::collections::HashSet<u32> = {
+        let diff = handle.load();
+        (0..diff.len()).map(|i| diff.nth_hunk(i).after.start).collect()
+    };
+    let view_id = view.id;
+    let hunks = doc.expanded_diff_hunks_mut(view_id);
+    if all_hunks.iter().all(|hunk| hunks.contains(hunk)) {
+        hunks.clear();
+    } else {
+        *hunks = all_hunks;
+    }
 }
 
 /// Returns the [Range] for a [Hunk] in the given text.

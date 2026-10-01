@@ -197,6 +197,11 @@ impl EditorView {
         let enable_cursor_line = view
             .diagnostics_handler
             .show_cursorline_diagnostics(doc, view.id);
+        if let Some(inline_diff) =
+            text_decorations::InlineDiff::new(doc, view.id, theme, &loader)
+        {
+            decorations.add_decoration(inline_diff);
+        }
         let inline_diagnostic_config = config.inline_diagnostics.prepare(width, enable_cursor_line);
         decorations.add_decoration(InlineDiagnostics::new(
             doc,

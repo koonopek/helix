@@ -307,6 +307,8 @@ This layer is a kludge of mappings, mostly pickers.
 | `c`     | Comment/uncomment selections                                            | `toggle_comments`                          |
 | `C`     | Block comment/uncomment selections                                      | `toggle_block_comments`                    |
 | `Alt-c` | Line comment/uncomment selections                                       | `toggle_line_comments`                     |
+| `v`     | Show/hide inline diff of the change under the cursor                    | `toggle_hunk_diff`                         |
+| `V`     | Show/hide inline diffs of all changes                                   | `toggle_all_hunk_diffs`                    |
 | `p`     | Paste system clipboard after selections                                 | `paste_clipboard_after`                    |
 | `P`     | Paste system clipboard before selections                                | `paste_clipboard_before`                   |
 | `y`     | Yank selections to clipboard                                            | `yank_to_clipboard`                        |

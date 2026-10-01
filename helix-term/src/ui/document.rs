@@ -471,19 +471,19 @@ impl<'a> TextRenderer<'a> {
     }
 }
 
-struct SyntaxHighlighter<'h, 'r, 't> {
+pub(crate) struct SyntaxHighlighter<'h, 'r, 't> {
     inner: Option<Highlighter<'h>>,
     text: RopeSlice<'r>,
     /// The character index of the next highlight event, or `usize::MAX` if the highlighter is
     /// finished.
-    pos: usize,
+    pub(crate) pos: usize,
     theme: &'t Theme,
     text_style: Style,
-    style: Style,
+    pub(crate) style: Style,
 }
 
 impl<'h, 'r, 't> SyntaxHighlighter<'h, 'r, 't> {
-    fn new(
+    pub(crate) fn new(
         inner: Option<Highlighter<'h>>,
         text: RopeSlice<'r>,
         theme: &'t Theme,
@@ -517,7 +517,7 @@ impl<'h, 'r, 't> SyntaxHighlighter<'h, 'r, 't> {
             .unwrap_or(usize::MAX);
     }
 
-    fn advance(&mut self) {
+    pub(crate) fn advance(&mut self) {
         let Some(highlighter) = self.inner.as_mut() else {
             return;
         };

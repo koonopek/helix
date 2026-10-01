@@ -155,6 +155,8 @@
 | `goto_prev_change` | Goto previous change | normal: `` [g ``, select: `` [g `` |
 | `goto_first_change` | Goto first change | normal: `` [G ``, select: `` [G `` |
 | `goto_last_change` | Goto last change | normal: `` ]G ``, select: `` ]G `` |
+| `toggle_hunk_diff` | Show/hide inline diff of the change under the cursor | normal: `` <space>v ``, select: `` <space>v `` |
+| `toggle_all_hunk_diffs` | Show/hide inline diffs of all changes | normal: `` <space>V ``, select: `` <space>V `` |
 | `goto_line_start` | Goto line start | normal: `` gh ``, `` <home> ``, select: `` gh ``, insert: `` <home> `` |
 | `goto_line_end` | Goto line end | normal: `` gl ``, `` <end> ``, select: `` gl `` |
 | `goto_column` | Goto column | normal: `` g\| `` |
