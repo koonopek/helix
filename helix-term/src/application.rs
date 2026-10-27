@@ -616,6 +616,10 @@ impl Application {
         );
 
         doc.set_last_saved_revision(doc_save_event.revision, doc_save_event.save_time);
+        // the comment lines now match the file on disk
+        if !doc.review_comments().is_empty() {
+            self.editor.persist_review_comments();
+        }
 
         let lines = doc_save_event.text.len_lines();
         let size = doc_save_event.text.len_bytes();
@@ -1360,6 +1364,7 @@ impl Application {
         }
 
         self.editor.close_language_servers(None).await;
+        self.editor.persist_review_comments();
 
         errs
     }

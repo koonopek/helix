@@ -88,6 +88,11 @@
 | `:pipe-to` | Pipe each selection to the shell command, ignoring output. |
 | `:run-shell-command`, `:sh`, `:!` | Run a shell command |
 | `:reset-diff-change`, `:diffget`, `:diffg` | Reset the diff change at the cursor position. |
+| `:review-comment` | Add a review comment on the selected lines, replacing the comment on exactly those lines. An empty comment removes it. |
+| `:review-delete` | Delete the review comments on the selected lines. |
+| `:review-copy` | Copy all review comments as markdown (e.g. for an LLM) to the clipboard or the given register. |
+| `:review-submit` | Submit all review comments as a review of the GitHub pull request of the current branch (requires `gh`). Takes `comment` (default), `approve` or `request-changes`. |
+| `:review-clear` | Delete all review comments. |
 | `:clear-register` | Clear given register. If no argument is provided, clear all registers. |
 | `:set-register` | Set contents of the given register. |
 | `:redraw` | Clear and re-render the whole UI |

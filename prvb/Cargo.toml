@@ -1,0 +1,11 @@
+[package]
+name = "prvb"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Fast TUI for switching between GitHub PRs to review (PR changes are left unstaged)"
+
+[dependencies]
+anyhow = "1"
+crossterm = "0.28"
+serde_json = "1"

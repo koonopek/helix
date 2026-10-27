@@ -43,6 +43,7 @@ tabstop = { modifiers = ["italic"], bg = "bossanova" }
 
 "ui.virtual.inline-diff.added" = { bg = "#2b4a3d" }
 "ui.virtual.inline-diff.removed" = { bg = "#552342" }
+"ui.virtual.review-comment" = { fg = "honey", bg = "#3a2e5f", modifiers = ["italic"] }
 
 # TODO: differentiate doc comment
 # concat (ERROR) @error.syntax and "MISSING ;" selectors for errors

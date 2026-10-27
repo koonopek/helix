@@ -157,6 +157,9 @@
 | `goto_last_change` | Goto last change | normal: `` ]G ``, select: `` ]G `` |
 | `toggle_hunk_diff` | Show/hide inline diff of the change under the cursor | normal: `` <space>v ``, select: `` <space>v `` |
 | `toggle_all_hunk_diffs` | Show/hide inline diffs of all changes | normal: `` <space>V ``, select: `` <space>V `` |
+| `review_comment` | Add or edit a review comment on the selected lines | normal: `` <space>m ``, select: `` <space>m `` |
+| `goto_next_review_comment` | Goto next review comment | normal: `` ]r ``, select: `` ]r `` |
+| `goto_prev_review_comment` | Goto previous review comment | normal: `` [r ``, select: `` [r `` |
 | `goto_line_start` | Goto line start | normal: `` gh ``, `` <home> ``, select: `` gh ``, insert: `` <home> `` |
 | `goto_line_end` | Goto line end | normal: `` gl ``, `` <end> ``, select: `` gl `` |
 | `goto_column` | Goto column | normal: `` g\| `` |

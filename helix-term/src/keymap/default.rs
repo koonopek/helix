@@ -121,6 +121,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "T" => goto_prev_test,
             "p" => goto_prev_paragraph,
             "x" => goto_prev_xml_element,
+            "r" => goto_prev_review_comment,
             "space" => add_newline_above,
         },
         "]" => { "Right bracket"
@@ -136,6 +137,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "T" => goto_next_test,
             "p" => goto_next_paragraph,
             "x" => goto_next_xml_element,
+            "r" => goto_next_review_comment,
             "space" => add_newline_below,
         },
 
@@ -293,6 +295,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "A-c" => toggle_line_comments,
             "v" => toggle_hunk_diff,
             "V" => toggle_all_hunk_diffs,
+            "m" => review_comment,
             "?" => command_palette,
         },
         "z" => { "View"

@@ -210,6 +210,9 @@ impl EditorView {
             inline_diagnostic_config,
             config.end_of_line_diagnostics,
         ));
+        if let Some(review_comments) = text_decorations::ReviewComments::new(doc, theme) {
+            decorations.add_decoration(review_comments);
+        }
         render_document(
             surface,
             inner,

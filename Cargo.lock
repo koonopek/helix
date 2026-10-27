@@ -2215,6 +2215,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "prvb"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossterm",
+ "serde_json",
+]
+
+[[package]]
 name = "ptr_meta"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

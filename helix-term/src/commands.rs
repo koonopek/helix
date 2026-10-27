@@ -1,5 +1,6 @@
 pub(crate) mod dap;
 pub(crate) mod lsp;
+pub(crate) mod review;
 pub(crate) mod syntax;
 pub(crate) mod typed;
 
@@ -12,6 +13,7 @@ use helix_stdx::{
 };
 use helix_vcs::{FileChange, Hunk};
 pub use lsp::*;
+pub use review::{goto_next_review_comment, goto_prev_review_comment, review_comment};
 pub use syntax::*;
 use tui::{
     text::{Span, Spans},
@@ -460,6 +462,9 @@ impl MappableCommand {
         goto_last_change, "Goto last change",
         toggle_hunk_diff, "Show/hide inline diff of the change under the cursor",
         toggle_all_hunk_diffs, "Show/hide inline diffs of all changes",
+        review_comment, "Add or edit a review comment on the selected lines",
+        goto_next_review_comment, "Goto next review comment",
+        goto_prev_review_comment, "Goto previous review comment",
         goto_line_start, "Goto line start",
         goto_line_end, "Goto line end",
         goto_column, "Goto column",

@@ -2870,6 +2870,106 @@ fn move_buffer_impl(
     Ok(())
 }
 
+fn review_add_comment(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    ensure!(
+        doc.path().is_some(),
+        "Review comments can only be added to files on disk"
+    );
+    let (start, end) = doc
+        .selection(view.id)
+        .primary()
+        .line_range(doc.text().slice(..));
+    doc.set_review_comment(
+        helix_view::review::LineRange::new(start, end),
+        args.join(" "),
+    );
+    cx.editor.persist_review_comments();
+    Ok(())
+}
+
+fn review_delete_comment(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let (start, end) = doc
+        .selection(view.id)
+        .primary()
+        .line_range(doc.text().slice(..));
+    let before = doc.review_comments().len();
+    doc.retain_review_comments(|lines| lines.end < start || lines.start > end);
+    let removed = before - doc.review_comments().len();
+    ensure!(removed > 0, "No review comments on the selected lines");
+    cx.editor.persist_review_comments();
+    cx.editor.set_status(format!(
+        "Deleted {removed} review comment{}",
+        if removed == 1 { "" } else { "s" }
+    ));
+    Ok(())
+}
+
+fn review_copy(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let reg = match args.first() {
+        Some(s) => {
+            ensure!(s.chars().count() == 1, format!("Invalid register {s}"));
+            s.chars().next().unwrap()
+        }
+        None => '+',
+    };
+    let markdown = review::review_markdown(cx.editor)?;
+    let count = review::review_comment_count(cx.editor);
+    cx.editor.registers.write(reg, vec![markdown])?;
+    cx.editor.set_status(format!(
+        "Copied {count} review comment{} to register {reg}",
+        if count == 1 { "" } else { "s" }
+    ));
+    Ok(())
+}
+
+fn review_submit(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let event = review::ReviewEvent::parse(args.first())?;
+    review::submit_review(cx, event)
+}
+
+fn review_clear(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let removed = cx.editor.clear_review_comments();
+    cx.editor.persist_review_comments();
+    cx.editor.set_status(format!(
+        "Cleared {removed} review comment{}",
+        if removed == 1 { "" } else { "s" }
+    ));
+    Ok(())
+}
+
 fn yank_diagnostic(
     cx: &mut compositor::Context,
     args: Args,
@@ -3979,6 +4079,68 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["diffget", "diffg"],
         doc: "Reset the diff change at the cursor position.",
         fun: reset_diff_change,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "review-comment",
+        aliases: &[],
+        doc: "Add a review comment on the selected lines, replacing the comment on exactly those lines. An empty comment removes it.",
+        fun: review_add_comment,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "review-delete",
+        aliases: &[],
+        doc: "Delete the review comments on the selected lines.",
+        fun: review_delete_comment,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "review-copy",
+        aliases: &[],
+        doc: "Copy all review comments as markdown (e.g. for an LLM) to the clipboard or the given register.",
+        fun: review_copy,
+        completer: CommandCompleter::all(completers::register),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "review-submit",
+        aliases: &[],
+        doc: "Submit all review comments as a review of the GitHub pull request of the current branch (requires `gh`). Takes `comment` (default), `approve` or `request-changes`.",
+        fun: review_submit,
+        completer: CommandCompleter::all(|_editor, input| {
+            ["comment", "approve", "request-changes"]
+                .into_iter()
+                .filter(|event| event.starts_with(input))
+                .map(|event| ((0..), event.into()))
+                .collect()
+        }),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "review-clear",
+        aliases: &[],
+        doc: "Delete all review comments.",
+        fun: review_clear,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

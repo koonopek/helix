@@ -10,6 +10,7 @@ use crate::{
     info::Info,
     input::KeyEvent,
     register::Registers,
+    review::{self, FileComments},
     theme::{self, Theme},
     tree::{self, Tree},
     Document, DocumentId, View, ViewId,
@@ -1294,6 +1295,13 @@ pub struct Editor {
 
     pub debug_adapters: dap::registry::Registry,
     pub breakpoints: HashMap<PathBuf, Vec<Breakpoint>>,
+    /// Review comments of closed documents by path, restored when the
+    /// document is reopened. See [`crate::review`].
+    pub review_stash: HashMap<PathBuf, FileComments>,
+    /// Workspaces whose stored review comments have been loaded (into
+    /// `review_stash`) and which are written back by
+    /// [`Editor::persist_review_comments`].
+    review_workspaces: HashSet<PathBuf>,
 
     pub syn_loader: Arc<ArcSwap<syntax::Loader>>,
     pub theme_loader: Arc<theme::Loader>,
@@ -1440,6 +1448,8 @@ impl Editor {
             theme: theme_loader.default(),
             language_servers,
             diagnostics: Diagnostics::new(),
+            review_stash: HashMap::new(),
+            review_workspaces: HashSet::new(),
             diff_providers: DiffProviderRegistry::default(),
             debug_adapters: dap::registry::Registry::new(),
             breakpoints: HashMap::new(),
@@ -2128,6 +2138,10 @@ impl Editor {
             doc.set_version_control_head(
                 self.diff_providers.get_current_head_name(&path, trust_full),
             );
+            self.load_review_workspace(doc.workspace_root());
+            if let Some(stashed) = self.review_stash.remove(&path) {
+                doc.restore_review_comments(stashed.comments);
+            }
 
             let id = self.new_document(doc);
             self.launch_language_servers(id);
@@ -2203,6 +2217,16 @@ impl Editor {
         }
 
         let doc = self.documents.remove(&doc_id).unwrap();
+        if let Some(path) = doc.path().filter(|_| !doc.review_comments().is_empty()) {
+            self.review_stash.insert(
+                path.to_path_buf(),
+                FileComments {
+                    path: path.to_path_buf(),
+                    workspace: doc.workspace_root().to_path_buf(),
+                    comments: doc.review_line_comments(),
+                },
+            );
+        }
 
         // If the document we removed was visible in all views, we will have no more views. We don't
         // want to close the editor just for a simple buffer close, so we need to create a new view
@@ -2231,6 +2255,78 @@ impl Editor {
         helix_event::dispatch(DocumentDidClose { editor: self, doc });
 
         Ok(())
+    }
+
+    /// All review comments, of open and closed documents, sorted by path.
+    pub fn review_comments(&self) -> Vec<FileComments> {
+        let mut files: Vec<FileComments> = self
+            .documents()
+            .filter(|doc| !doc.review_comments().is_empty())
+            .filter_map(|doc| {
+                Some(FileComments {
+                    path: doc.path()?.to_path_buf(),
+                    workspace: doc.workspace_root().to_path_buf(),
+                    comments: doc.review_line_comments(),
+                })
+            })
+            .chain(self.review_stash.values().cloned())
+            .collect();
+        files.sort_by(|a, b| a.path.cmp(&b.path));
+        files
+    }
+
+    /// Loads the stored review comments of `workspace` once.
+    fn load_review_workspace(&mut self, workspace: &Path) {
+        if self.review_workspaces.contains(workspace) {
+            return;
+        }
+        self.review_workspaces.insert(workspace.to_path_buf());
+        for file in review::load(workspace) {
+            if self.document_by_path(&file.path).is_none() {
+                self.review_stash.entry(file.path.clone()).or_insert(file);
+            }
+        }
+    }
+
+    /// Writes the review comments of all workspaces which have (or had)
+    /// comments to disk.
+    pub fn persist_review_comments(&mut self) {
+        let commented: Vec<PathBuf> = self
+            .documents()
+            .filter(|doc| doc.path().is_some() && !doc.review_comments().is_empty())
+            .map(|doc| doc.workspace_root().to_path_buf())
+            .collect();
+        for workspace in commented {
+            // don't overwrite comments stored by an earlier session
+            self.load_review_workspace(&workspace);
+        }
+        if self.review_workspaces.is_empty() {
+            return;
+        }
+        let files = self.review_comments();
+        for workspace in &self.review_workspaces {
+            let files = files.iter().filter(|file| &file.workspace == workspace);
+            if let Err(err) = review::store(workspace, files) {
+                log::error!(
+                    "Failed to store review comments of {}: {err}",
+                    workspace.display()
+                );
+            }
+        }
+    }
+
+    /// Removes all review comments, returns how many were removed.
+    pub fn clear_review_comments(&mut self) -> usize {
+        let mut removed: usize = self
+            .review_stash
+            .drain()
+            .map(|(_, file)| file.comments.len())
+            .sum();
+        for doc in self.documents_mut() {
+            removed += doc.review_comments().len();
+            doc.retain_review_comments(|_| false);
+        }
+        removed
     }
 
     pub fn save<P: Into<PathBuf>>(

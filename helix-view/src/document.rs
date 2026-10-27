@@ -47,6 +47,7 @@ use crate::{
     editor::Config,
     events::{DocumentDidChange, SelectionDidChange},
     expansion,
+    review::{LineComment, LineRange, ReviewComment},
     view::ViewPosition,
     DocumentId, Editor, Theme, View, ViewId,
 };
@@ -213,6 +214,8 @@ pub struct Document {
     /// line of its `after` range at the time it was expanded; entries that
     /// no longer match a hunk are simply ignored.
     pub(crate) expanded_diff_hunks: HashMap<ViewId, HashSet<u32>>,
+    /// Code review comments, sorted by `start`.
+    review_comments: Vec<ReviewComment>,
 
     // when document was used for most-recent-used buffer picker
     pub focused_at: std::time::Instant,
@@ -766,6 +769,7 @@ impl Document {
             language_servers: HashMap::new(),
             diff_handle: None,
             expanded_diff_hunks: HashMap::new(),
+            review_comments: Vec::new(),
             config,
             version_control_head: None,
             focused_at: std::time::Instant::now(),
@@ -1577,6 +1581,24 @@ impl Document {
             )
         });
 
+        if !self.review_comments.is_empty() {
+            // comments are anchored at line starts, `After` keeps them on
+            // the original line when text is inserted at its start
+            changes.update_positions(
+                self.review_comments
+                    .iter_mut()
+                    .map(|comment| (&mut comment.start, Assoc::After)),
+            );
+            changes.update_positions(
+                self.review_comments
+                    .iter_mut()
+                    .map(|comment| (&mut comment.end, Assoc::After)),
+            );
+            for comment in &mut self.review_comments {
+                comment.end = comment.end.max(comment.start);
+            }
+        }
+
         // Update the inlay hint annotations' positions, helping ensure they are displayed in the proper place
         let apply_inlay_hint_changes = |annotations: &mut Vec<InlineAnnotation>| {
             changes.update_positions(
@@ -2022,6 +2044,73 @@ impl Document {
     /// see [`Document::expanded_diff_hunks`].
     pub fn expanded_diff_hunks_mut(&mut self, view_id: ViewId) -> &mut HashSet<u32> {
         self.expanded_diff_hunks.entry(view_id).or_default()
+    }
+
+    /// Code review comments of this document, sorted by position.
+    pub fn review_comments(&self) -> &[ReviewComment] {
+        &self.review_comments
+    }
+
+    /// Sets the comment on exactly `lines`, replacing an existing comment on
+    /// the same lines. An empty `comment` removes it instead.
+    pub fn set_review_comment(&mut self, lines: LineRange, comment: String) {
+        let text = self.text.slice(..);
+        let existing = self
+            .review_comments
+            .iter()
+            .position(|c| c.lines(text) == lines);
+        match (existing, comment.trim().is_empty()) {
+            (Some(idx), true) => {
+                self.review_comments.remove(idx);
+            }
+            (Some(idx), false) => self.review_comments[idx].text = comment,
+            (None, true) => (),
+            (None, false) => {
+                let comment = ReviewComment::new(text, lines, comment);
+                let idx = self
+                    .review_comments
+                    .partition_point(|c| (c.start, c.end) <= (comment.start, comment.end));
+                self.review_comments.insert(idx, comment);
+            }
+        }
+    }
+
+    /// Removes all comments for which `f` returns `false`.
+    pub fn retain_review_comments(&mut self, mut f: impl FnMut(LineRange) -> bool) {
+        let text = self.text.slice(..);
+        self.review_comments.retain(|c| f(c.lines(text)));
+    }
+
+    /// The comments of this document resolved to lines.
+    pub fn review_line_comments(&self) -> Vec<LineComment> {
+        let text = self.text.slice(..);
+        self.review_comments
+            .iter()
+            .map(|c| {
+                let lines = c.lines(text);
+                LineComment {
+                    lines,
+                    text: c.text.clone(),
+                    anchor: Cow::<str>::from(text.line(lines.start)).trim().to_string(),
+                }
+            })
+            .collect()
+    }
+
+    /// Restores comments previously obtained from
+    /// [`Document::review_line_comments`]. Comments are moved to their
+    /// anchor line if the document changed, lines past the end of the
+    /// document are clamped.
+    pub fn restore_review_comments(&mut self, comments: Vec<LineComment>) {
+        let last_line = self.text.len_lines() - 1;
+        for mut comment in comments {
+            comment.relocate(self.text.slice(..));
+            let lines = LineRange::new(
+                comment.lines.start.min(last_line),
+                comment.lines.end.min(last_line),
+            );
+            self.set_review_comment(lines, comment.text);
+        }
     }
 
     pub fn version_control_head(&self) -> Option<Arc<Box<str>>> {

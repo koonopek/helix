@@ -316,6 +316,7 @@ This layer is a kludge of mappings, mostly pickers.
 | `Alt-c` | Line comment/uncomment selections                                       | `toggle_line_comments`                     |
 | `v`     | Show/hide inline diff of the change under the cursor                    | `toggle_hunk_diff`                         |
 | `V`     | Show/hide inline diffs of all changes                                   | `toggle_all_hunk_diffs`                    |
+| `m`     | Add or edit a review comment on the selected lines                      | `review_comment`                           |
 | `p`     | Paste system clipboard after selections                                 | `paste_clipboard_after`                    |
 | `P`     | Paste system clipboard before selections                                | `paste_clipboard_before`                   |
 | `y`     | Yank selections to clipboard                                            | `yank_to_clipboard`                        |
@@ -383,6 +384,8 @@ These mappings are in the style of [vim-unimpaired](https://github.com/tpope/vim
 | `[p`     | Go to previous paragraph                     | `goto_prev_paragraph`   |
 | `]g`     | Go to next change                            | `goto_next_change`      |
 | `[g`     | Go to previous change                        | `goto_prev_change`      |
+| `]r`     | Go to next review comment                    | `goto_next_review_comment` |
+| `[r`     | Go to previous review comment                | `goto_prev_review_comment` |
 | `]G`     | Go to last change                            | `goto_last_change`      |
 | `[G`     | Go to first change                           | `goto_first_change`     |
 | `[x`     | Go to next (X)HTML element                   | `goto_next_xml_element` |

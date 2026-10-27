@@ -2,6 +2,7 @@ use crate::{
     align_view,
     annotations::diagnostics::InlineDiagnostics,
     annotations::diff::InlineDiffAnnotation,
+    annotations::review::ReviewCommentAnnotation,
     document::{DocumentColorSwatches, DocumentInlayHints},
     editor::{GutterConfig, GutterType},
     graphics::Rect,
@@ -532,6 +533,10 @@ impl View {
         if doc.expanded_diff_hunks(self.id).is_some() {
             text_annotations
                 .add_line_annotation(Box::new(InlineDiffAnnotation::new(doc, self.id)));
+        }
+
+        if !doc.review_comments().is_empty() {
+            text_annotations.add_line_annotation(Box::new(ReviewCommentAnnotation::new(doc)));
         }
 
         text_annotations

@@ -357,6 +357,7 @@ These scopes are used for theming the editor interface:
 | `ui.virtual.jump-label`           | Style for virtual jump labels                                                                  |
 | `ui.virtual.inline-diff.added`    | Added lines of an expanded diff hunk (see `toggle_hunk_diff`)                                  |
 | `ui.virtual.inline-diff.removed`  | Removed lines of an expanded diff hunk, shown as virtual text (falls back to `diff.minus`)     |
+| `ui.virtual.review-comment`       | Review comments shown below the commented lines (see `review_comment`, falls back to `info`)   |
 | `ui.menu`                         | Code and command completion menus                                                              |
 | `ui.menu.selected`                | Selected autocomplete item                                                                     |
 | `ui.menu.scroll`                  | `fg` sets thumb color, `bg` sets track color of scrollbar                                      |
